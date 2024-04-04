@@ -1,0 +1,96 @@
+\documentclass{article}
+\usepackage{graphicx} % Required for inserting images
+\usepackage{xeCJK}
+\CJKfontspec{AR PL KaitiM Big5} % 標楷體
+ 
+\title{CV-HW1-report}
+\author{110590005-蕭耕宏-北科大}
+
+\date{March 2024}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+This is the report of the first homework of the course "Computer Vision". The homework is about the basic image processing, including the image reading, writing, and the basic image processing operations. The homework is implemented by Python and the OpenCV library. The report will show the implementation of the homework and the results of the homework.
+
+\section{Implementation}
+The implementation of the homework is based on the OpenCV library. The OpenCV library is a powerful library for image processing. The library provides many useful functions for image processing, such as the image reading, writing, and the basic image processing operations
+
+\subsection{Question 1}
+\begin{enumerate}
+    \item \textbf{Convert Color Image to Grayscale Image}:
+    \begin{itemize}
+        \item \textbf{Function:} \texttt{rgb\_to\_grayscale}
+        \item \textbf{Method:}
+        \begin{itemize}
+            \item Weight the red, green, and blue channels by factors 0.3, 0.3, and 0.4 respectively.
+        \end{itemize}
+    \end{itemize}
+    
+    \item \textbf{Convert Grayscale Image to Binary Image}:
+    \begin{itemize}
+        \item \textbf{Function:} \texttt{grayscale\_to\_binary}
+        \item \textbf{Method:}
+        \begin{itemize}
+            \item Convert the grayscale image to a binary image using a default threshold value of 128.
+            \item Allow users to adjust the threshold value as needed.
+        \end{itemize}
+    \end{itemize}
+    
+    \item \textbf{Convert Color Image to Indexed-Color Image}:
+    \begin{itemize}
+        \item \textbf{Function:} \texttt{convert\_to\_indexed}
+        \item \textbf{Method:}
+        \begin{enumerate}
+            \item Reshape the image array into a 2D array with 3 columns:
+            \begin{itemize}
+                \item Use -1 to infer the number of rows based on the total number of elements in the original array.
+            \end{itemize}
+            \item Convert the data type of the array to \texttt{float32} for compatibility with the k-means algorithm.
+            \item Set criteria for the k-means algorithm to stop:
+            \begin{itemize}
+                \item Stop when the maximum number of iterations is reached or when the specified accuracy is achieved.
+            \end{itemize}
+            \item Run the k-means algorithm on the array with the specified number of clusters:
+            \begin{itemize}
+                \item Retrieve cluster centers and labels for each pixel.
+            \end{itemize}
+            \item Round the cluster centers to the nearest integer and convert to \texttt{uint8} data type.
+        \end{enumerate}
+    \end{itemize}
+\end{enumerate}
+
+
+
+\subsection{Question 2}
+\begin{enumerate}
+    \item \textbf{Subquestion 2.1: Resize Without Interpolation}
+    The features are as follows. 
+    \begin{itemize}
+        \item \texttt{Simple method but may lead to aliasing artifacts or loss of image quality.} 
+        \item \texttt{Particularly noticeable when scaling to larger or smaller sizes.} 
+    \end{itemize}
+    The implementation of resize Without Interpolation involves the following steps:
+    \begin{enumerate}
+        \item Directly select and copy pixels from the original image to the resized image.
+        \item Numpy is leveraged to accelerate the calculation
+    \end{enumerate}
+    
+    \item \textbf{Subquestion 2.2: Resize With Bilinear Interpolation}
+        \begin{itemize}
+            \item \texttt{Smoother results compared to nearest neighbor interpolation.}
+            \item \texttt{Intensity values of adjacent pixels are considered for interpolation.}
+        \end{itemize}
+    The implementation of bilinear interpolation involves the following steps:
+    \begin{enumerate}
+        \item Determine the position of the neighboring pixels in the original image.
+        \item Calculate the weights for each neighboring pixel based on the distance from the target pixel. 
+        \item Avoid divided by 0 by adding an epsilon(0.000001, suggested by ChatGPT) when calculating distance.
+        \item Compute the intensity value of the target pixel as a weighted average of the neighboring pixel intensities.
+    \end{enumerate}
+\end{enumerate}
+ 
+
+\end{document}
