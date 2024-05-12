@@ -77,7 +77,7 @@ class PixelGroup:
         count = len(self.pixels[neighbor_label])
         new_mean = (self.means[neighbor_label] * count + pixel) / (count + 1)
         variance_diff = (self.variances[neighbor_label] * count + (np.array(pixel) - new_mean) ** 2) / (count + 1) - self.variances[neighbor_label]
-        return mean_diff @ mean_diff + variance_diff @ variance_diff
+        return mean_diff, variance_diff
 
     def update_mean_all(self):
         for label in self.pixels:
@@ -102,7 +102,7 @@ class Processing:
         self.labels = np.zeros((self.height, self.width))
         self.pqueue = PriorityQueue()
         self.pixel_group = PixelGroup()
-        self.global_priority_weight = 0.999
+        # self.global_priority_weight = 0.999
 
     def is_valid(self, x, y):
         return 0 <= x < self.height and 0 <= y < self.width
@@ -131,7 +131,13 @@ class Processing:
             eight_neighbors_pixel += self.image[nx, ny]
         horizontal_gradient = np.sum(np.abs(np.sum(eight_neighbors_pixel * sobel_horizontal_mask, axis=-1)))
         vertical_gradient = np.sum(np.abs(np.sum(eight_neighbors_pixel * sobel_vertical_mask, axis=-1)))
-        return abs(horizontal_gradient) + abs(vertical_gradient)
+        return np.sqrt(horizontal_gradient) + np.sqrt(vertical_gradient)
+
+    def get_priority(self, x, y, label):
+        mean_diff, variance_diff = self.pixel_group.priority(self.image[x, y], label)
+        edge_priority = self.edge_priority(x, y)
+        # print(np.sqrt(np.sum(mean_diff ** 2)) * 0.5, np.sqrt(np.sum(variance_diff ** 2)) * 100, edge_priority * 0.05)
+        return np.sqrt(mean_diff @ mean_diff) * 1.2 + np.sqrt(variance_diff @ variance_diff) * 4 + edge_priority * 0.01
 
     def match_color(self, seeds):
         for index, color in enumerate(seeds):
@@ -149,9 +155,8 @@ class Processing:
             for nx, ny in self.get_four_neighbors(i, j):
                 if self.labels[nx, ny] > 0:
                     self.labels[i, j] = -2
-                    global_priority = self.pixel_group.priority(self.image[i, j], self.labels[nx, ny])
-                    local_priority = self.edge_priority(i, j)
-                    self.pqueue.put(global_priority * self.global_priority_weight + local_priority * (1 - self.global_priority_weight), i, j)
+                    priority = self.get_priority(i, j, self.labels[nx, ny])
+                    self.pqueue.put(priority, i, j)
                     break
 
     def watershed_segmentation(self):
@@ -173,9 +178,8 @@ class Processing:
                 self.pixel_group.add_pixel(self.image[x, y], label)
                 for _, ux, uy in neighbor_group.get_unlabeled():
                     self.labels[ux, uy] = -2
-                    global_priority = self.pixel_group.priority(self.image[ux, uy], label)
-                    local_priority = self.edge_priority(ux, uy)
-                    self.pqueue.put(global_priority * self.global_priority_weight + local_priority * (1 - self.global_priority_weight), ux, uy)
+                    priority = self.get_priority(ux, uy, label)
+                    self.pqueue.put(priority, ux, uy)
                 bar()
 
     def color_original_image(self, seeds):
