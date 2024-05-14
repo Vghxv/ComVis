@@ -8,10 +8,10 @@ config_handler.set_global(spinner='dots_waves2', bar='blocks', unknown='stars')
 class PriorityQueue:
     def __init__(self):
         self.elements = []
-    def debug(self):
-        with open('queue.txt', 'w') as f:
-            for element in self.elements:
-                f.write(f'{element[0]} {element[1]} {element[2]}\n')
+    # def debug(self):
+    #     with open('queue.txt', 'w') as f:
+    #         for element in self.elements:
+    #             f.write(f'{element[0]} {element[1]} {element[2]}\n')
     def is_empty(self):
         return len(self.elements) == 0
 
@@ -47,17 +47,17 @@ class PixelGroup:
         self.means: dict = {}
         self.variances: dict = {}
 
-    def debug(self):
-        with open('pixels.txt', 'w') as f:
-            for label in self.pixels:
-                for pixel in self.pixels[label]:
-                    f.write(f'{label} {pixel[0]} {pixel[1]} {pixel[2]}\n')
-        with open('means.txt', 'w') as f:
-            for label in self.means:
-                f.write(f'{label} {self.means[label][0]} {self.means[label][1]} {self.means[label][2]}\n')
-        with open('variances.txt', 'w') as f:
-            for label in self.variances:
-                f.write(f'{label} {self.variances[label][0]} {self.variances[label][1]} {self.variances[label][2]}\n')
+    # def debug(self):
+    #     with open('pixels.txt', 'w') as f:
+    #         for label in self.pixels:
+    #             for pixel in self.pixels[label]:
+    #                 f.write(f'{label} {pixel[0]} {pixel[1]} {pixel[2]}\n')
+    #     with open('means.txt', 'w') as f:
+    #         for label in self.means:
+    #             f.write(f'{label} {self.means[label][0]} {self.means[label][1]} {self.means[label][2]}\n')
+    #     with open('variances.txt', 'w') as f:
+    #         for label in self.variances:
+    #             f.write(f'{label} {self.variances[label][0]} {self.variances[label][1]} {self.variances[label][2]}\n')
 
     def add_pixel(self, pixel, label):
         if label not in self.pixels:
@@ -92,6 +92,12 @@ class PixelGroup:
 
     def get_variance(self):
         return self.variance
+    
+    def __len__(self):
+        count = 0
+        for label in self.pixels:
+            count += len(self.pixels[label])
+        return count
 
 
 class Processing:
@@ -129,15 +135,25 @@ class Processing:
         eight_neighbors_pixel = np.zeros(3)
         for nx, ny in self.get_3x3_region(x, y):
             eight_neighbors_pixel += self.image[nx, ny]
-        horizontal_gradient = np.sum(np.abs(np.sum(eight_neighbors_pixel * sobel_horizontal_mask, axis=-1)))
-        vertical_gradient = np.sum(np.abs(np.sum(eight_neighbors_pixel * sobel_vertical_mask, axis=-1)))
-        return np.sqrt(horizontal_gradient) + np.sqrt(vertical_gradient)
+        horizontal_gradient = abs(np.sum(np.sum(eight_neighbors_pixel * sobel_horizontal_mask)))
+        vertical_gradient = abs(np.sum((eight_neighbors_pixel * sobel_vertical_mask)))
+        return horizontal_gradient + vertical_gradient
 
+    # def get_local_mean(self, x, y):
+    #     mean_mask = np.array([
+    #         [1, 1, 1],
+    #         [1, 0, 1],
+    #         [1, 1, 1]
+    #     ])
+    #     local_mean = np.zeros(3)
+    #     for nx, ny in self.get_3x3_region(x, y):
+    #         local_mean += self.image[nx, ny] * mean_mask[nx - x + 1, ny - y + 1]
+    #     return local_mean / 8
+    
     def get_priority(self, x, y, label):
         mean_diff, variance_diff = self.pixel_group.priority(self.image[x, y], label)
         edge_priority = self.edge_priority(x, y)
-        # print(np.sqrt(np.sum(mean_diff ** 2)) * 0.5, np.sqrt(np.sum(variance_diff ** 2)) * 100, edge_priority * 0.05)
-        return np.sqrt(mean_diff @ mean_diff) * 1.2 + np.sqrt(variance_diff @ variance_diff) * 4 + edge_priority * 0.01
+        return np.sqrt(mean_diff @ mean_diff) * 4.5 + np.sqrt(variance_diff @ variance_diff) * 4 + edge_priority * 0.6 #+ np.sum((self.image[x, y] - self.get_local_mean(x, y)) ** 2)
 
     def match_color(self, seeds):
         for index, color in enumerate(seeds):
@@ -160,7 +176,7 @@ class Processing:
                     break
 
     def watershed_segmentation(self):
-        label_num = len(np.where(self.labels < 1)[0])
+        label_num = self.width * self.height - np.where(self.labels > 0)[0].shape[0]
         with alive_bar(label_num) as bar:
             while not self.pqueue.is_empty():
                 _, x, y = self.pqueue.get()
@@ -183,7 +199,7 @@ class Processing:
                 bar()
 
     def color_original_image(self, seeds):
-        markers_weight = 0.7
+        markers_weight = 0.5
         image_weight = 1 - markers_weight
         output_image = np.zeros((self.height, self.width, 3))
         for i in range(self.height):
